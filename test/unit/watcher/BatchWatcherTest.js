@@ -25,7 +25,7 @@ describe('BatchWatcher Tests', () => {
         },
       };
 
-      redisFake.publish('TICKER_BATCH_PROCESSING', event);
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
 
       const tickerProcessingBatches = batchWatcher.getBatches();
       expect(tickerProcessingBatches[eventId].batchStartTime).to.equal(fixedDate);
@@ -49,19 +49,19 @@ describe('BatchWatcher Tests', () => {
       events = [
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: new Date(nowDate.getTime() - (10 * MS_IN_A_SECOND)),
+          eventCreatedTimestamp: nowDate.getTime() - (10 * MS_IN_A_SECOND),
         },
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: new Date(nowDate.getTime() - (4 * MS_IN_A_SECOND)),
+          eventCreatedTimestamp: nowDate.getTime() - (4 * MS_IN_A_SECOND),
         },
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: new Date(nowDate.getTime() - (2 * MS_IN_A_SECOND)),
+          eventCreatedTimestamp: nowDate.getTime() - (2 * MS_IN_A_SECOND),
         },
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: nowDate,
+          eventCreatedTimestamp: nowDate.getTime(),
         },
       ];
 
@@ -77,7 +77,7 @@ describe('BatchWatcher Tests', () => {
 
       events.forEach((event) => {
 
-        redisFake.publish('TICKER_BATCH_PROCESSING', event);
+        redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
       });
 
       let tickerDecoratedThroughput = batchWatcher.getTickerDecoratedThroughput();
@@ -86,12 +86,12 @@ describe('BatchWatcher Tests', () => {
 
       const event = {
         name: 'TICKER_DECORATED',
-        eventCreatedTimestamp: new Date(nowDate.getTime() - (65 * MS_IN_A_SECOND)),
+        eventCreatedTimestamp: nowDate.getTime() - (65 * MS_IN_A_SECOND),
       };
 
       dateStub.shiftWindowForwardBySeconds(120);
 
-      redisFake.publish('TICKER_BATCH_PROCESSING', event);
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
 
       expectedThroughput = 0;
 
@@ -104,10 +104,10 @@ describe('BatchWatcher Tests', () => {
 
       const event = {
         name: 'TICKER_DECORATED',
-        eventCreatedTimestamp: new Date(nowDate.getTime() - (10 * MS_IN_A_SECOND)),
+        eventCreatedTimestamp: nowDate.getTime() - (10 * MS_IN_A_SECOND),
       };
 
-      redisFake.publish('TICKER_BATCH_PROCESSING', event);
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
 
       const expectedThroughput = 1 / 10;
 
@@ -122,7 +122,7 @@ describe('BatchWatcher Tests', () => {
 
       events.forEach((event) => {
 
-        redisFake.publish('TICKER_BATCH_PROCESSING', event);
+        redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
       });
 
       const tickerDecoratedThroughput = batchWatcher.getTickerDecoratedThroughput();
@@ -130,25 +130,49 @@ describe('BatchWatcher Tests', () => {
       expect(tickerDecoratedThroughput).to.equal(expectedThroughput);
     });
 
+    it('emits events when the throughput is updated', (done) => {
+
+      let emittedEventCount = 0;
+      const expectedThroughput = 4 / 10;
+
+      batchWatcher.on('DECORATION_THROUGHPUT_UPDATED', (data) => {
+
+        emittedEventCount += 1;
+
+        if (emittedEventCount === 4) {
+
+          expect(emittedEventCount).to.equal(4);
+          expect(data.toString()).to.equal(expectedThroughput.toString());
+
+          done();
+        }
+      });
+
+      events.forEach((event) => {
+
+        redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
+      });
+    });
+
     it('discards events outside the 60 second throughput window', () => {
 
       events.unshift({
         name: 'TICKER_DECORATED',
-        eventCreatedTimestamp: new Date(nowDate.getTime() - (65 * MS_IN_A_SECOND)),
+        eventCreatedTimestamp: nowDate.getTime() - (65 * MS_IN_A_SECOND),
       });
 
       const expectedThroughput = 4 / 10;
 
       dateStub.shiftWindowBackBySeconds(10);
 
-      redisFake.publish('TICKER_BATCH_PROCESSING', events[0]);
-      redisFake.publish('TICKER_BATCH_PROCESSING', events[1]);
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(events[0]));
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(events[1]));
 
       dateStub.resetWindow();
 
-      redisFake.publish('TICKER_BATCH_PROCESSING', events[2]);
-      redisFake.publish('TICKER_BATCH_PROCESSING', events[3]);
-      redisFake.publish('TICKER_BATCH_PROCESSING', events[4]);
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(events[2]));
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(events[3]));
+      redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(events[4]));
 
       const tickerDecoratedThroughput = batchWatcher.getTickerDecoratedThroughput();
 
@@ -160,19 +184,19 @@ describe('BatchWatcher Tests', () => {
       events = [
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: new Date(nowDate.getTime() - (2 * MS_IN_A_SECOND)),
+          eventCreatedTimestamp: nowDate.getTime() - (2 * MS_IN_A_SECOND),
         },
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: new Date(nowDate.getTime() - (4 * MS_IN_A_SECOND)),
+          eventCreatedTimestamp: nowDate.getTime() - (4 * MS_IN_A_SECOND),
         },
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: new Date(nowDate.getTime() - (10 * MS_IN_A_SECOND)),
+          eventCreatedTimestamp: nowDate.getTime() - (10 * MS_IN_A_SECOND),
         },
         {
           name: 'TICKER_DECORATED',
-          eventCreatedTimestamp: nowDate,
+          eventCreatedTimestamp: nowDate.getTime(),
         },
       ];
 
@@ -180,7 +204,7 @@ describe('BatchWatcher Tests', () => {
 
       events.forEach((event) => {
 
-        redisFake.publish('TICKER_BATCH_PROCESSING', event);
+        redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
       });
 
       const tickerDecoratedThroughput = batchWatcher.getTickerDecoratedThroughput();
@@ -192,14 +216,14 @@ describe('BatchWatcher Tests', () => {
 
       events.push({
         name: 'TICKER_DECORATED',
-        eventCreatedTimestamp: new Date(nowDate.getTime() - (65 * MS_IN_A_SECOND)),
+        eventCreatedTimestamp: nowDate.getTime() - (65 * MS_IN_A_SECOND),
       });
 
       const expectedThroughput = 4 / 10;
 
       events.forEach((event) => {
 
-        redisFake.publish('TICKER_BATCH_PROCESSING', event);
+        redisFake.publish('TICKER_BATCH_PROCESSING', JSON.stringify(event));
       });
 
       const tickerDecoratedThroughput = batchWatcher.getTickerDecoratedThroughput();

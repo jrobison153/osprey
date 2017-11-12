@@ -2,10 +2,15 @@
   "name": "osprey",
   "version": "1.0.0",
   "description": "Watches the kaching system",
-  "main": "index.js",
+  "main": "build/server/serverWrapper.js",
   "scripts": {
+    "build": "./node_modules/.bin/babel src -d build",
     "lint": "node ./node_modules/eslint/bin/eslint ./src/**/*.js ./test/**/*.js",
-    "test": "npm run test:unit",
+    "start": "node ./build/server/serverWrapper.js",
+    "test": "npm run test:unit && npm run test:acceptance && test:integration",
+    "test:acceptance": "mocha --require babel-register --require babel-polyfill test/acceptance/**/*Test.js",
+    "test:acceptance:watch": "mocha --watch --require babel-register --require babel-polyfill test/acceptance/**/*Test.js",
+    "test:integration": "mocha --require babel-register --require babel-polyfill test/integration/**/*Test.js",
     "test:unit": "mocha --require babel-register --require babel-polyfill test/unit/**/*Test.js",
     "test:unit:watch": "mocha --watch --require babel-register --require babel-polyfill test/unit/**/*Test.js"
   },
@@ -26,7 +31,11 @@
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.0",
     "babel-register": "^6.26.0",
-    "binary-search-insert": "^1.0.3"
+    "binary-search-insert": "^1.0.3",
+    "cli-color": "^1.2.0",
+    "clui": "^0.3.6",
+    "redis": "^2.8.0",
+    "restify": "^6.2.3"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -35,6 +44,8 @@
     "eslint-config-airbnb-base": "^11.3.1",
     "eslint-plugin-import": "^2.7.0",
     "mocha": "^3.5.0",
-    "redis-fake": "^1.0.0"
+    "redis-fake": "^1.0.0",
+    "request": "^2.83.0",
+    "request-promise": "^4.2.2"
   }
 }

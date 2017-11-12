@@ -1,10 +1,13 @@
 import binaryInsert from 'binary-search-insert';
+import { EventEmitter } from 'events';
 
 const MS_IN_A_SECOND = 1000;
 
-export default class BatchWatcher {
+export default class BatchWatcher extends EventEmitter {
 
   constructor(redis, date) {
+
+    super();
 
     this.redis = redis;
     this.date = date;
@@ -22,13 +25,15 @@ export default class BatchWatcher {
 
   handleMessageEvents(channel, message) {
 
-    if (message.name === 'BATCH_TICKER_PROCESSING_STARTED') {
+    const messageAsObj = JSON.parse(message);
 
-      this.handleBatchProcessingStartedEvent(message);
+    if (messageAsObj.name === 'BATCH_TICKER_PROCESSING_STARTED') {
 
-    } else if (message.name === 'TICKER_DECORATED') {
+      this.handleBatchProcessingStartedEvent(messageAsObj);
 
-      this.handleTickerDecoratedEvent(message);
+    } else if (messageAsObj.name === 'TICKER_DECORATED') {
+
+      this.handleTickerDecoratedEvent(messageAsObj);
     }
   }
 
@@ -57,6 +62,8 @@ export default class BatchWatcher {
     this.insertNewEventInAscendingOrder(event);
 
     this.calculateCurrentDecoratedTickerThroughput();
+
+    this.emit('DECORATION_THROUGHPUT_UPDATED', this.currentDecorationThroughput);
   }
 
   removeEventsOlderThanSixtySeconds() {
@@ -65,7 +72,7 @@ export default class BatchWatcher {
 
     this.tickerDecoratedEvents = this.tickerDecoratedEvents.filter((event) => {
 
-      const eventCreationTime = new Date(event.eventCreatedTimestamp).getTime();
+      const eventCreationTime = event.eventCreatedTimestamp;
 
       return eventCreationTime >= sixtySecondWindow;
     });
@@ -91,18 +98,18 @@ export default class BatchWatcher {
     const earliestEvent = this.tickerDecoratedEvents[0];
     const mostRecentEvent = this.tickerDecoratedEvents[this.tickerDecoratedEvents.length - 1];
 
-    const earliestEventTime = new Date(earliestEvent.eventCreatedTimestamp);
-    const mostRecentEventTime = new Date(mostRecentEvent.eventCreatedTimestamp);
+    const earliestEventTime = earliestEvent.eventCreatedTimestamp;
+    const mostRecentEventTime = mostRecentEvent.eventCreatedTimestamp;
 
-    const timeSpan = (mostRecentEventTime.getTime() - earliestEventTime.getTime()) / MS_IN_A_SECOND;
+    const timeSpan = (mostRecentEventTime - earliestEventTime) / MS_IN_A_SECOND;
 
     this.currentDecorationThroughput = this.tickerDecoratedEvents.length / timeSpan;
   }
 
   calculateThroughputBetweenEventAndWindow() {
 
-    const eventTime = new Date(this.tickerDecoratedEvents[0].eventCreatedTimestamp);
-    const timeSpan = (this.date.now() - eventTime.getTime()) / MS_IN_A_SECOND;
+    const eventTime = this.tickerDecoratedEvents[0].eventCreatedTimestamp;
+    const timeSpan = (this.date.now() - eventTime) / MS_IN_A_SECOND;
 
     this.currentDecorationThroughput = this.tickerDecoratedEvents.length / timeSpan;
   }
@@ -110,15 +117,16 @@ export default class BatchWatcher {
   insertNewEventInAscendingOrder(event) {
 
     const sixtySecondWindow = this.getThroughputWindow();
+    const eventTimestamp = event.eventCreatedTimestamp;
 
-    if (event.eventCreatedTimestamp >= sixtySecondWindow) {
+    if (eventTimestamp >= sixtySecondWindow) {
 
-      // binary insert on an Array is expensive, if performance issues present convert this
+      // binary insert on an Array is expensive. If performance issues present, convert this
       // structure to a linked list
       binaryInsert(this.tickerDecoratedEvents, (existingEvent, newEvent) => {
 
-        const existingEventTs = new Date(existingEvent.eventCreatedTimestamp).getTime();
-        const newEventTs = new Date(newEvent.eventCreatedTimestamp).getTime();
+        const existingEventTs = existingEvent.eventCreatedTimestamp;
+        const newEventTs = newEvent.eventCreatedTimestamp;
 
         let compareResult;
         if (newEventTs < existingEventTs) {
@@ -137,7 +145,7 @@ export default class BatchWatcher {
 
   getThroughputWindow() {
 
-    return this.date.now().getTime() - 60000;
+    return this.date.now() - 60000;
   }
 }
 

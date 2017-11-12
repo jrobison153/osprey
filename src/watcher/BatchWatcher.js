@@ -16,7 +16,14 @@ export default class BatchWatcher extends EventEmitter {
     this.currentDecorationThroughput = 0.0;
     this.tickerDecoratedEvents = [];
 
-    this.subscriber = this.redis.createClient();
+    const redisOptions = {
+      retry_strategy: BatchWatcher.perpetualRetryStrategy,
+    };
+
+    const redisPort = process.env.REDIS_PORT || 6379;
+    const redisHost = process.env.REDIS_HOST || '127.0.0.1';
+
+    this.subscriber = this.redis.createClient(redisPort, redisHost, redisOptions);
 
     this.subscriber.on('message', this.handleMessageEvents.bind(this));
 
@@ -146,6 +153,21 @@ export default class BatchWatcher extends EventEmitter {
   getThroughputWindow() {
 
     return this.date.now() - 60000;
+  }
+
+  static perpetualRetryStrategy(options) {
+
+    const retryAfterSeconds = 5000;
+
+    if (options.error && options.error.code) {
+
+      console.info(`Redis connection error '${options.error.code}', retrying in ${retryAfterSeconds}ms ...`);
+    } else {
+
+      console.info(`Unknown Redis connection issue, retrying in ${retryAfterSeconds}ms ...`);
+    }
+
+    return retryAfterSeconds;
   }
 }
 

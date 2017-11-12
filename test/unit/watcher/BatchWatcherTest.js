@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import RedisStub from '../../stub/RedisStub';
+import RedisSpy from '../../spy/RedisSpy';
 import FixedDateStub from '../../stub/FixedDateStub';
 import BatchWatcher from '../../../src/watcher/BatchWatcher';
 
@@ -7,16 +7,106 @@ const MS_IN_A_SECOND = 1000;
 
 describe('BatchWatcher Tests', () => {
 
+  describe('when creating the client', () => {
+
+    let redisSpy;
+
+    describe('and using default configuration', () => {
+
+      beforeEach(() => {
+
+        redisSpy = new RedisSpy();
+        const fixedDate = Date.now();
+        const dateStub = new FixedDateStub(fixedDate);
+
+        // eslint-disable-next-line no-unused-vars
+        const batchWatcher = new BatchWatcher(redisSpy, dateStub);
+      });
+
+      it('configures redis with the default port if env var REDIS_PORT not set', () => {
+
+        expect(redisSpy.port).to.equal(6379);
+      });
+
+      it('configures redis with the default host if env var REDIS_HOST not set', () => {
+
+        expect(redisSpy.host).to.equal('127.0.0.1');
+      });
+
+      it('configures redis with the default retry strategy', () => {
+
+        expect(redisSpy.options.retry_strategy).to.equal(BatchWatcher.perpetualRetryStrategy);
+      });
+    });
+
+    describe('and using configuration from the environment', () => {
+
+      const envBackup = {};
+
+      before(() => {
+
+        envBackup.REDIS_PORT = process.env.REDIS_PORT;
+        envBackup.REDIS_HOST = process.env.REDIS_HOST;
+
+        process.env.REDIS_PORT = 9099;
+        process.env.REDIS_HOST = 'redishost';
+      });
+
+      after(() => {
+
+        if (envBackup.REDIS_PORT) {
+
+          process.env.REDIS_PORT = envBackup.REDIS_PORT;
+        } else {
+
+          delete process.env.REDIS_PORT;
+        }
+
+        if (envBackup.REDIS_HOST) {
+
+          process.env.REDIS_HOST = envBackup.REDIS_HOST;
+        } else {
+
+          delete process.env.REDIS_HOST;
+        }
+      });
+
+      it('sets the port to the value of REDIS_PORT env var', () => {
+
+        redisSpy = new RedisSpy();
+        const fixedDate = Date.now();
+        const dateStub = new FixedDateStub(fixedDate);
+
+        // eslint-disable-next-line no-unused-vars
+        const batchWatcher = new BatchWatcher(redisSpy, dateStub);
+
+        expect(redisSpy.port).to.equal('9099');
+      });
+
+      it('sets the host to the value of REDIS_HOST env var', () => {
+
+        redisSpy = new RedisSpy();
+        const fixedDate = Date.now();
+        const dateStub = new FixedDateStub(fixedDate);
+
+        // eslint-disable-next-line no-unused-vars
+        const batchWatcher = new BatchWatcher(redisSpy, dateStub);
+
+        expect(redisSpy.host).to.equal('redishost');
+      });
+    });
+  });
+
   describe('when BATCH_TICKER_PROCESSING_STARTED event is received', () => {
 
     it('the id is stored with the time the event was received', () => {
 
-      const redisStub = new RedisStub();
+      const redisSpy = new RedisSpy();
       const fixedDate = Date.now();
       const dateStub = new FixedDateStub(fixedDate);
-      const batchWatcher = new BatchWatcher(redisStub, dateStub);
+      const batchWatcher = new BatchWatcher(redisSpy, dateStub);
 
-      const redisFake = redisStub.createClient();
+      const redisFake = redisSpy.createClient();
       const eventId = 'abcdefg';
       const event = {
         name: 'BATCH_TICKER_PROCESSING_STARTED',
@@ -65,10 +155,10 @@ describe('BatchWatcher Tests', () => {
         },
       ];
 
-      const redisStub = new RedisStub();
-      redisFake = redisStub.createClient();
+      const redisSpy = new RedisSpy();
+      redisFake = redisSpy.createClient();
       dateStub = new FixedDateStub(nowDate);
-      batchWatcher = new BatchWatcher(redisStub, dateStub);
+      batchWatcher = new BatchWatcher(redisSpy, dateStub);
     });
 
     it('reports the throughput correctly if there are zero events in the window', () => {

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-expressions */
 import rp from 'request-promise';
 import { expect } from 'chai';
 import * as server from '../../src/server/server';
@@ -27,7 +28,7 @@ describe('server tests', () => {
 
       it('registers the reporter as a listener for TICKER_THROUGHPUT_UPDATED events', async () => {
 
-        expect(batchWatcherSpy.throughputUpdatedEventListener).to.equal(reporterStub.report);
+        expect(batchWatcherSpy.throughputUpdatedEventListener()).to.equal('I am the stub');
       });
     });
 

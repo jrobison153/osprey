@@ -7,7 +7,7 @@
     "build": "./node_modules/.bin/babel src -d build",
     "lint": "node ./node_modules/eslint/bin/eslint ./src/**/*.js ./test/**/*.js",
     "start": "node ./build/server/serverWrapper.js",
-    "test": "npm run test:unit && npm run test:acceptance && test:integration",
+    "test": "npm run test:unit && npm run test:acceptance && npm run test:integration",
     "test:acceptance": "mocha --require babel-register --require babel-polyfill test/acceptance/**/*Test.js",
     "test:acceptance:watch": "mocha --watch --require babel-register --require babel-polyfill test/acceptance/**/*Test.js",
     "test:integration": "mocha --require babel-register --require babel-polyfill test/integration/**/*Test.js",
@@ -35,16 +35,16 @@
     "cli-color": "^1.2.0",
     "clui": "^0.3.6",
     "redis": "^2.8.0",
-    "restify": "^6.2.3"
+    "restify": "^6.3.2"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "chai": "^4.1.1",
-    "eslint": "^4.4.1",
+    "eslint": "^4.11.0",
     "eslint-config-airbnb-base": "^11.3.1",
     "eslint-plugin-import": "^2.7.0",
     "mocha": "^3.5.0",
-    "redis-fake": "^1.0.0",
+    "redis-fake": "^2.0.0",
     "request": "^2.83.0",
     "request-promise": "^4.2.2"
   }

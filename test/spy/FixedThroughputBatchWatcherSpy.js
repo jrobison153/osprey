@@ -1,12 +1,13 @@
+/* eslint-disable class-methods-use-this */
 
 export default class FixedThroughputBatchWatcherSpy {
 
   constructor() {
 
-    this.throughputUpdatedEventListener = () => {};
+    this.throughputUpdatedEventListeners = [];
   }
 
-  getTickerDecoratedThroughput () {
+  getTickerDecoratedThroughput() {
 
     return 93425.34;
   }
@@ -15,7 +16,7 @@ export default class FixedThroughputBatchWatcherSpy {
 
     if (event === 'DECORATION_THROUGHPUT_UPDATED') {
 
-      this.throughputUpdatedEventListener = listener;
+      this.throughputUpdatedEventListeners.push(listener);
     }
   }
 }

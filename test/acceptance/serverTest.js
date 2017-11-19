@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-expressions */
 import rp from 'request-promise';
+import io from 'socket.io-client';
 import { expect } from 'chai';
 import * as server from '../../src/server/server';
 import FixedThroughputBatchWatcherSpy from '../spy/FixedThroughputBatchWatcherSpy';
@@ -7,28 +8,38 @@ import ReporterStub from '../stub/ReporterStub';
 
 describe('server tests', () => {
 
+  let serverPort;
+
   describe('when the server starts', () => {
 
     describe('and the the watcher is configured', () => {
 
       let batchWatcherSpy;
-      let reporterStub;
+      let commandLineReporterStub;
 
       beforeEach(async () => {
 
         batchWatcherSpy = new FixedThroughputBatchWatcherSpy();
-        reporterStub = new ReporterStub();
-        await server.start(batchWatcherSpy, reporterStub);
+        commandLineReporterStub = new ReporterStub();
+        const webSocketReporterStub = new ReporterStub();
+
+        const reporters = {
+          commandLine: commandLineReporterStub,
+          webSocket: webSocketReporterStub,
+        };
+
+        await server.start(batchWatcherSpy, reporters);
       });
 
-      afterEach(async () => {
+      afterEach(() => {
 
-        server.stop();
+        return server.stop();
       });
 
-      it('registers the reporter as a listener for TICKER_THROUGHPUT_UPDATED events', async () => {
+      it('registers the reporters as a listeners for TICKER_THROUGHPUT_UPDATED events', async () => {
 
-        expect(batchWatcherSpy.throughputUpdatedEventListener()).to.equal('I am the stub');
+        expect(batchWatcherSpy.throughputUpdatedEventListeners[0]()).to.equal('I am the stub');
+        expect(batchWatcherSpy.throughputUpdatedEventListeners[1]()).to.equal('I am the stub');
       });
     });
 
@@ -81,11 +92,44 @@ describe('server tests', () => {
         expect(server.getPort()).to.equal('9999');
       });
     });
+
+    describe('and the web socket is setup', () => {
+
+      beforeEach(async () => {
+
+        const batchWatcherStub = new FixedThroughputBatchWatcherSpy();
+
+        await server.start(batchWatcherStub);
+
+        serverPort = server.getPort();
+      });
+
+      afterEach(() => {
+
+        return server.stop();
+      });
+
+      it('accepts a web socket connection', () => {
+
+        let socketConnectionOpened = false;
+
+        const socket = io(`http://localhost:${serverPort}`);
+
+        return new Promise((resolve) => {
+
+          socket.on('connect', () => {
+
+            socketConnectionOpened = true;
+            expect(socketConnectionOpened).to.be.true;
+            resolve();
+          });
+        });
+      });
+    });
   });
 
   describe('when verifying REST resources', () => {
 
-    let serverPort;
     let batchWatcherStub;
 
     beforeEach(async () => {

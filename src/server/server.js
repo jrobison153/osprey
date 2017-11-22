@@ -1,6 +1,6 @@
 /* eslint-disable no-use-before-define */
-import restify from 'restify';
 import socketio from 'socket.io';
+import express from 'express';
 import redis from 'redis';
 import BatchWatcher from '../watcher/BatchWatcher';
 import CommandLineReporter from '../reporter/CommandLineReporter';
@@ -9,9 +9,9 @@ import LineBufferFactory from '../reporter/LineBufferFactory';
 import LineFactory from '../reporter/LineFactory';
 
 let serverPort = 8083;
-let restifyServer;
+let theServer;
 let socket;
-
+const expressApp = express();
 
 export const start = (batchWatcher, reporters) => {
 
@@ -21,15 +21,13 @@ export const start = (batchWatcher, reporters) => {
 
   serverPort = process.env.PORT || 8083;
 
-  restifyServer = restify.createServer();
+  configureResources(theBatchWatcher);
 
   return new Promise((resolve) => {
 
-    restifyServer.listen(serverPort, () => {
+    theServer = expressApp.listen(serverPort, () => {
 
       console.info(`Osprey listening on port ${serverPort}`);
-
-      configureResources(theBatchWatcher);
 
       initializeWebSocket();
 
@@ -46,7 +44,7 @@ export const stop = () => {
 
   return new Promise((resolve) => {
 
-    restifyServer.close(resolve);
+    theServer.close(resolve);
   });
 };
 
@@ -57,14 +55,14 @@ export const getPort = () => {
 
 const configureResources = (theBatchWatcher) => {
 
-  restifyServer.get('/health', (req, resp) => {
+  expressApp.get('/health', (req, resp) => {
 
-    resp.send('ok');
+    resp.json('ok');
   });
 
-  restifyServer.get('/decoration/throughput', (req, resp) => {
+  expressApp.get('/decoration/throughput', (req, resp) => {
 
-    resp.send({
+    resp.json({
       throughput: theBatchWatcher.getTickerDecoratedThroughput(),
     });
   });
@@ -72,9 +70,7 @@ const configureResources = (theBatchWatcher) => {
 
 const initializeWebSocket = () => {
 
-  const io = socketio();
-
-  socket = io.listen(restifyServer.server);
+  socket = socketio.listen(theServer);
 };
 
 const registerCommandLineReporter = (reporters, batchWatcher) => {
